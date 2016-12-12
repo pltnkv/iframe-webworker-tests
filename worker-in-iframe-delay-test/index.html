@@ -1,0 +1,64 @@
+<html>
+
+<body>
+<!--<iframe src="http://alpha2:8080/iframe.html?1" width="50" height="100"></iframe>-->
+<!--<iframe src="http://alpha2:8080/iframe.html?2" width="50" height="100" sandbox="allow-scripts"></iframe>-->
+
+<button id="btn">send msg</button>
+<script>
+    var x = "1234567890";
+    var iterations = 5;
+    for (var j = 0; j < iterations; j++) {
+        x += x + x;
+    }
+    console.log(x.length)
+
+    var timeStart
+    var receivedMsgNumber = 0
+    var doneCallback = function () {}
+    window.someVar = document.body
+
+    window.addEventListener("message", function listener(event) {
+//        if (event.data === "answer") {
+        receivedMsgNumber++
+//        }
+
+//        console.log('ROOT:: origin = ', event.origin, ' data = ', event.data)
+        if (receivedMsgNumber === window.frames.length) {
+            doneCallback()
+        }
+    })
+
+    for (var i = 0; i < 10; i++) {
+        var el = document.createElement("iframe");
+        document.body.appendChild(el);
+        el.style.display = 'none'
+        el.width = "50";
+        el.height = "50";
+//        el.src = 'http://alpha2:8080/iframe.html?' + i;
+        el.src = 'http://192.168.88.214:8080/iframe.html?' + i;
+    }
+
+    function sendMessage() {
+        for (var i = 0; i < window.frames.length; i++) {
+            var frame = window.frames[i];
+            frame.postMessage(x, '*')
+        }
+    }
+
+    document.getElementById('btn').addEventListener('click', function () {
+        receivedMsgNumber = 0
+        doneCallback = function () {
+            console.log(Date.now() - timeStart)
+//            alert(Date.now() - timeStart)
+        }
+        timeStart = Date.now()
+        sendMessage()
+    })
+</script>
+
+
+</body>
+
+
+</html>

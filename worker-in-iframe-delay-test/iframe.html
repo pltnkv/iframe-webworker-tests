@@ -1,0 +1,23 @@
+<html>
+<body>
+<!--<img src="https://hsto.org/files/826/f1a/6e1/826f1a6e11394c51a5fc3eb2298b4d64.jpeg" width="100">-->
+<!--<img src="http://alpha2:8080/embed_logo.png?kjshdflkjsdf=333" width="100">-->
+
+<script>
+    var x = "1234567890";
+    var iterations = 5;
+    for (var j = 0; j < iterations; j++) {
+        x += x + x;
+    }
+    var worker = new Worker("worker.js");
+    worker.onmessage = function (e) {
+//        console.log("Received: " + e.data);
+        window.parent.postMessage(x, '*')
+    }
+
+    window.addEventListener("message", function listener(event) {
+        worker.postMessage(x);
+    })
+</script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<html>
+
+<head>
+    <style>
+        .slider {
+            width: 30px;
+            height: 30px;
+            background-color: red;
+            position: absolute;
+            left: 0px;
+            top: 40px;
+            transform: translateX(0px);
+            cursor: ew-resize;
+        }
+
+        .slider--green {
+            width: 30px;
+            height: 10px;
+            background-color: green;
+            position: absolute;
+            left: 0px;
+            transform: translateX(0px);
+        }
+    </style>
+    <script src="../utils.js"></script>
+</head>
+
+<body>
+    <a href="?wn=20&delay=true&iframe=true">iframe + delay</a>,
+    <a href="?wn=20&delay=false&iframe=false">no iframe + no delay</a>
+
+    <div class="slider-container">
+        <div id="slider" class="slider"></div>
+    </div>
+
+    <script>
+        var WORKERS_NUMBER = parseInt(getParameterByName('wn'), 10)
+        var USE_IFRAMES = getParameterByName('iframe') === 'true'
+        var WITH_DELAY = getParameterByName('delay') === 'true'
+
+        var sliderX = 0
+        var offsetX = 0
+        var slider = document.getElementById('slider')
+        slider.addEventListener('mousedown', onMouseDown)
+
+        var workerCubes = []
+        for (var i = 1; i <= WORKERS_NUMBER; i++) {
+            if (USE_IFRAMES) {
+                workerCubes.push(createIFrame(i))
+            } else {
+                workerCubes.push(createWorkerCube(i))
+            }
+        }
+
+        window.addEventListener("message", function listener(event) {
+            var data = event.data
+            if (data.action === 'move') {
+                workerCubes[data.index].setPosition(data.data)
+            }
+        })
+
+        redraw()
+
+        function onMouseDown(e) {
+            document.addEventListener('mouseup', onMouseUp)
+            document.addEventListener('mousemove', onMouseMove)
+            offsetX = e.pageX - sliderX
+            moveSlider(e.pageX - offsetX)
+            e.preventDefault()
+        }
+
+        function onMouseUp() {
+            document.removeEventListener('mouseup', onMouseUp)
+            document.removeEventListener('mousemove', onMouseMove)
+        }
+
+        function onMouseMove(e) {
+            moveSlider(e.pageX - offsetX)
+        }
+
+        function moveSlider(x) {
+            sliderX = x
+            setTimeout(function() {
+                workerCubes.forEach(function(cube) {
+                    cube.sendPositionChanged(sliderX)
+                })
+            })
+        }
+
+        function redraw() {
+            moveElement(slider, sliderX)
+
+            workerCubes.forEach(function(cube) {
+                cube.redraw()
+            })
+
+            requestAnimationFrame(redraw)
+        }
+
+        var eventAttached = false
+
+        function createIFrame(index) {
+            var iframe = document.createElement("iframe")
+            iframe.style.display = 'none'
+            iframe.src = 'iframe.html?rand=' + Math.random()
+            document.body.appendChild(iframe)
+
+            return createCube(index, function(x) {
+                window.frames[index - 1].postMessage({
+                    withDelay: WITH_DELAY,
+                    action: 'move',
+                    index: index - 1,
+                    data: x
+                }, '*')
+            })
+        }
+
+        function createWorkerCube(index) {
+            var worker = new Worker("worker.js");
+            var cube = createCube(index, function(x) {
+                worker.postMessage({
+                    x: x,
+                    withDelay: WITH_DELAY
+                })
+            })
+            worker.onmessage = function(event) {
+                cube.setPosition(event.data.x)
+            }
+            return cube
+        }
+
+        function createCube(index, sendFn) {
+            var cube = document.createElement('div')
+            cube.style.top = 15 * index + 70
+            cube.classList.add('slider--green')
+            document.body.appendChild(cube)
+
+            var cubePosition = 0
+            return {
+                getPosition: function() {
+                    return cubePosition
+                },
+                setPosition: function(x) {
+                    cubePosition = x
+                },
+                redraw: function() {
+                    moveElement(cube, cubePosition)
+                },
+                sendPositionChanged: function(newPos) {
+                    sendFn(newPos)
+                }
+            }
+        }
+
+        function moveElement(element, posX) {
+            element.style.transform = 'translateX(' + posX + 'px)'
+        }
+    </script>
+</body>
+
+</html>

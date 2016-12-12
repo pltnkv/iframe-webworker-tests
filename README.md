@@ -1,1 +1,1 @@
-# iframe-webworker-tests
+# tests with iframes and webworkers
